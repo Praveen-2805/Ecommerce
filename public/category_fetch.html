@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categories</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <br>
+    <div style="position: absolute; top: 10px; right: 10px;">
+        <form action="/search" method="GET" class="d-flex align-items-center">
+          <input type="text" name="query" autocomplete="off" class="form-control form-control-sm me-2" style="max-width: 600px;" placeholder="Search" aria-label="Search">
+          <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        </form>
+    </div>
+    <br><br>
+    <h1 style="position: absolute; top: 10px; left: 10px;">E-Commerce</h1>
+    <br><br>
+    <div class="container">
+        <h2>Category Table</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Stock</th>
+                    <th>Created Date</th>
+                </tr>
+            </thead>
+            <tbody id="categoryTableBody"></tbody>
+        </table>
+    </div>
+    <div class='text-center' id ='paginationButtons'></div>
+</body>
+
+<script>
+    let currentPage = 1; // Global variable to track current page
+    
+    function renderCategoryData(data) {
+        const categoryTableBody = document.getElementById('categoryTableBody');
+        categoryTableBody.innerHTML = ''; 
+        data.results.forEach(category => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${category.category_id}</td>
+                <td> <a href="/products/${category.category_id}">${category.category_name}</a></td>
+                <td>${category.stock}</td>
+                <td>${new Date(category.created_date).toLocaleDateString()}</td>
+            `;
+            categoryTableBody.appendChild(row);
+        });
+    }
+    
+    function renderPaginationButtons(data) {
+        const paginationButtons = document.getElementById('paginationButtons');
+        paginationButtons.innerHTML = ''; // Clear existing pagination buttons
+        
+        // Previous button
+        const prevButton = document.createElement('button');
+        prevButton.textContent = 'Previous';
+        prevButton.classList.add('btn-sm', 'btn-info', 'mx-1');
+        if (currentPage === 1) {
+            prevButton.disabled = true;
+        }else{
+            paginationButtons.appendChild(prevButton);
+        }
+        prevButton.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                window.history.pushState(null, '', `?page=${currentPage}`);
+                navigateToPage(currentPage);
+            }
+        });
+        
+        // Page buttons
+        for (let i = 1; i <= data.totalPages; i++) {
+            const button = document.createElement('button');
+            button.textContent = i;
+            button.classList.add('btn-sm', 'btn-info', 'mx-1');
+            if (i === currentPage) {
+                button.classList.add('active');
+            }
+            button.addEventListener('click', () => {
+                currentPage = i;
+                navigateToPage(currentPage);
+                window.history.pushState(null, '', `?page=${currentPage}`);
+            });
+            paginationButtons.appendChild(button);
+        }
+        
+        // Next button
+        const nextButton = document.createElement('button');
+        nextButton.textContent = 'Next';
+        nextButton.classList.add('btn-sm', 'btn-info', 'mx-1');
+        nextButton.addEventListener('click', () => {
+            if (currentPage < data.totalPages) {
+                currentPage++;
+                window.history.pushState(null, '', `?page=${currentPage}`);
+                navigateToPage(currentPage);
+            }
+        });
+        if (currentPage === data.totalPages) {
+            nextButton.disabled = true;
+        }else{
+            paginationButtons.appendChild(nextButton);
+        }
+    }
+    
+    function navigateToPage(page) {
+        currentPage = page;
+        fetch(`/category/json?page=${page}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                renderCategoryData(data);
+                renderPaginationButtons(data);
+            })
+            .catch(error => console.error('Error fetching categories:', error));
+    }
+    
+    // Parse the URL to get the page number
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageParam = urlParams.get('page');
+    const initialPage = parseInt(pageParam) || 1;
+    
+    navigateToPage(initialPage);
+    
+    </script>
+    
+</html>

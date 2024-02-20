@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KartForYou</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div style="position: absolute; top: 10px; right: 10px;">
+        <form action="/search" method="GET" class="d-flex align-items-center ">
+          <input type="text" id = "query" name="query" autocomplete="off" class="form-control form-control-sm me-2 mx-3" style="max-width: 150px;" placeholder="Search" aria-label="Search">
+          <button type="submit" class="btn btn-primary btn-sm">Search</button>
+        </form>
+    </div>
+    <br><br><br>
+    <div class="container" style="text-align:end">
+        <select id="categoryDropdown" class="form-control" onchange="navigateToCategory(this)"></select>
+    </div>
+    <h1 style="position: absolute; top: 10px; left: 10px;">E-Commerce</h1>
+    <br>
+    <br>
+    <div class="container">
+        <h2>Product Table</h2>
+        <br>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Product ID</th>
+                    <th>Product Name</th>
+                    <th>Brand</th>
+                    <th>Price</th>
+                    <th>Discounted Price</th>
+                    <th>Created Date</th>
+                    <th>Category Name</th>
+                </tr>
+            </thead>
+            <tbody id="productTableBody">
+            </tbody>
+        </table>
+    </div>
+    <div class='text-center' id="paginationButtons"></div>
+    <br><br>
+    <div class='container'>
+    <button class="btn btn-success" onclick="function gocat() { window.location.href = '/category'; } gocat();">Categories</button>
+    <button class="btn btn-success" style="float: right;" onclick="function goprod() { window.location.href = '/products/0'; } goprod();">All Products</button>
+    </div>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1; // Track total pages globally
+    
+        function navigateToPage(page) {
+            let categoryId = window.location.pathname.split('/').pop(); // Extract category ID from URL
+            currentPage = page;
+            let queryParams = new URLSearchParams(window.location.search);
+            let query = queryParams.get('query');
+            fetch(`/searchresults?query=${query}&page=${page}`) // Fetch JSON data from backend API
+                .then(response => response.json())
+                .then(data => {
+                    totalPages = data.totalPages; // Update totalPages
+                    const productTableBody = document.getElementById('productTableBody');
+                    productTableBody.innerHTML = '';
+                    data.results.forEach(product => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${product.product_id}</td>
+                            <td>${product.product_name}</td>
+                            <td>${product.brand}</td>
+                            <td>${product.price}</td>
+                            <td>${product.discounted_price}</td>
+                            <td>${new Date(product.created_date).toLocaleDateString()}</td>
+                            <td>${product.category_name}</td>
+                        `;
+                        productTableBody.appendChild(row);
+                    });
+                    const categoryDropdown = document.getElementById('categoryDropdown');
+                    let dropdownOptions = '<option value="0">All Categories</option>';
+                    dropdownOptions += data.dropdownOptions;
+                    categoryDropdown.innerHTML = dropdownOptions;
+    
+                    // Generate pagination buttons
+                    const paginationButtons = document.getElementById('paginationButtons');
+                    paginationButtons.innerHTML = ''; // Clear existing pagination buttons
+    
+                    // Previous button
+                    const prevButton = document.createElement('button');
+                    prevButton.textContent = "Previous";
+                    prevButton.classList.add('btn-sm', 'btn-info', 'mx-1');
+                    prevButton.addEventListener('click', () => {
+                        if (currentPage > 1) {
+                            window.history.pushState(null, '', `/search?query=${query}&page=${currentPage-1}`);
+                            navigateToPage(currentPage - 1);
+                        }
+                    });
+                    if (currentPage === 1) {
+                        prevButton.disabled = true;
+                    }else{
+                        paginationButtons.appendChild(prevButton);
+                    }
+    
+                    // Numbered buttons
+                    for (let i = 1; i <= data.totalPages; i++) {
+                        const button = document.createElement('button');
+                        button.textContent = i;
+                        button.classList.add('btn-sm', 'btn-info', 'mx-1');
+                        button.addEventListener('click', () => {
+                            navigateToPage(i);
+                            window.history.pushState(null, '', `/search?query=${query}&page=${i}`);
+                        });
+                        paginationButtons.appendChild(button);
+                    }
+    
+                    // Next button
+                    const nextButton = document.createElement('button');
+                    nextButton.textContent = "Next";
+                    nextButton.classList.add('btn-sm', 'btn-info', 'mx-1');
+                    nextButton.addEventListener('click', () => {
+                        if (currentPage < totalPages) {
+                            window.history.pushState(null, '', `/search?query=${query}&page=${currentPage+1}`);
+                            navigateToPage(currentPage + 1);
+                        }
+                    });
+                    if (currentPage >= totalPages) {
+                        nextButton.disabled = true;
+                    }else{
+                    paginationButtons.appendChild(nextButton);
+                    }
+                })
+                .catch(error => console.error('Error fetching products:', error));
+        }
+    
+        navigateToPage(1);
+        function navigateToCategory(categoryId) {
+            if (categoryId.value !== "null")
+                window.location.href = '/products/' + categoryId.value;
+            else
+                window.location.href = '/products';
+        }
+    </script>
+    
+</body>
+</html>
